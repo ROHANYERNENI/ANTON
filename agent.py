@@ -1,11 +1,14 @@
 import os
 import ollama
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+from github import Github
+from dotenv import load_dotenv
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings, Document
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.readers.github import GithubRepositoryReader
 
-# 1. Make sure the local brain is ready
+# 1. Load the secrets from the hidden .env file
+load_dotenv()
+
 print("Checking local AI engine status...")
 ollama.pull("deepseek-coder:6.7b")
 
@@ -14,7 +17,7 @@ Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
 print("\n--- Anton AI Agent Menu ---")
 print("1. Read a Local Folder")
-print("2. Link GitHub Repository via Token")
+print("2. Link GitHub Repository")
 choice = input("Choose an option (1 or 2): ").strip()
 
 documents = []
@@ -29,27 +32,51 @@ if choice == "1":
     documents = SimpleDirectoryReader(repo_path, recursive=True).load_data()
 
 elif choice == "2":
-    print("\n💡 To link GitHub, you need a Personal Access Token.")
-    print("Create one here: https://github.com")
+    saved_token = os.getenv("GITHUB_TOKEN")
+    saved_username = os.getenv("GITHUB_USERNAME")
     
-    token = input("\nPaste your GitHub Access Token: ").strip()
-    owner = input("Enter the GitHub Username/Owner of the repo: ").strip()
-    repo = input("Enter the Repository Name: ").strip()
+    if saved_token:
+        token = saved_token
+        print("\n🔑 GitHub Access Token loaded automatically.")
+    else:
+        token = input("\nPaste your GitHub Access Token: ").strip()
+        
+    if saved_username:
+        owner = saved_username
+        print(f"👤 Repository Owner loaded automatically: {owner}")
+    else:
+        owner = input("Enter the GitHub Username/Owner of the repo: ").strip()
+        
+    repo_name = input("Enter the Repository Name: ").strip()
     branch = input("Enter the Branch Name (default is 'main'): ").strip() or "main"
     
-    # Save the token to environment memory so the tool can grab it implicitly
-    os.environ["GITHUB_TOKEN"] = token
-    
-    print(f"\nConnecting to GitHub and fetching '{owner}/{repo}'...")
+    print(f"\nConnecting to GitHub and fetching '{owner}/{repo_name}'...")
     try:
-        reader = GithubRepositoryReader(
-            github_client=None, 
-            owner=owner,
-            repo=repo,
-            use_parser=False,
-            verbose=False,
-        )
-        documents = reader.load_data(branch=branch)
+        from github import Auth
+        auth = Auth.Token(token)
+        g = Github(auth=auth)
+        
+        repo = g.get_repo(f"{owner}/{repo_name}")
+        contents = repo.get_contents("", ref=branch)
+        print("Downloading code files from the cloud...")
+        
+        while contents:
+            file_content = contents.pop(0)
+            if file_content.type == "dir":
+                contents.extend(repo.get_contents(file_content.path, ref=branch))
+            else:
+                if any(file_content.name.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.zip', '.tar', '.gz', '.pdf', '.ico']):
+                    continue
+                try:
+                    decoded = file_content.decoded_content.decode('utf-8')
+                    documents.append(Document(text=decoded, metadata={"file_name": file_content.name, "file_path": file_content.path}))
+                except:
+                    continue
+                    
+        if not documents:
+            print("❌ Found no readable text/code files in the repository.")
+            exit()
+            
     except Exception as e:
         print(f"\n❌ Failed to fetch repository. Error: {e}")
         exit()
@@ -58,8 +85,7 @@ else:
     print("Invalid choice. Exiting.")
     exit()
 
-# 3. Create the database index from whatever data was loaded
-print("\nIndexing codebase... Please wait a moment...")
+print(f"\nIndexing {len(documents)} code elements... Please wait a moment...")
 index = VectorStoreIndex.from_documents(documents)
 query_engine = index.as_query_engine()
 
