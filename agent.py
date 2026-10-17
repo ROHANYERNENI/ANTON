@@ -1,7 +1,12 @@
 import os
+import ollama  # Make sure this is imported at the top
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+# AUTOMATIC LLM DOWNLOAD: This checks and downloads the model if your friend doesn't have it!
+print("Checking AI engine status...")
+ollama.pull("deepseek-coder:6.7b") 
 
 # 1. Setup the DeepSeek Coder brain through Ollama
 Settings.llm = Ollama(model="deepseek-coder:6.7b", request_timeout=60.0)
@@ -27,7 +32,7 @@ documents = SimpleDirectoryReader(repo_path, recursive=True).load_data()
 index = VectorStoreIndex.from_documents(documents)
 query_engine = index.as_query_engine()
 
-print("\n🎉 The agent has memorized your code! Type 'exit' to stop.")
+print("\n The agent has memorized your code! Type 'exit' to stop.")
 
 while True:
     user_question = input("\nYou: ")
