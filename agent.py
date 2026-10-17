@@ -29,26 +29,27 @@ if choice == "1":
     documents = SimpleDirectoryReader(repo_path, recursive=True).load_data()
 
 elif choice == "2":
-    print("\n💡 To link GitHub, you need a Personal Access Token (Classic).")
-    print("Create one here: https://github.com (Give it 'repo' access)")
+    print("\n💡 To link GitHub, you need a Personal Access Token.")
+    print("Create one here: https://github.com")
     
     token = input("\nPaste your GitHub Access Token: ").strip()
     owner = input("Enter the GitHub Username/Owner of the repo: ").strip()
     repo = input("Enter the Repository Name: ").strip()
     branch = input("Enter the Branch Name (default is 'main'): ").strip() or "main"
     
-    # Save the token temporarily so the reader can find it automatically
+    # Save the token to environment memory so the tool can grab it implicitly
     os.environ["GITHUB_TOKEN"] = token
     
     print(f"\nConnecting to GitHub and fetching '{owner}/{repo}'...")
     try:
-        documents = GithubRepositoryReader(
-            github_client=None, # Uses the environment variable token automatically
+        reader = GithubRepositoryReader(
+            github_client=None, 
             owner=owner,
             repo=repo,
             use_parser=False,
             verbose=False,
-        ).load_data(branch=branch)
+        )
+        documents = reader.load_data(branch=branch)
     except Exception as e:
         print(f"\n❌ Failed to fetch repository. Error: {e}")
         exit()
