@@ -1,13 +1,21 @@
 import os
 import ollama
 from github import Github
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key  # Added set_key to write values dynamically
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings, Document
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-# 1. Load the secrets from the hidden .env file
-load_dotenv()
+# Path to our local background memory configuration file
+ENV_FILE_PATH = ".env"
+
+# Create a blank memory file if it doesn't exist yet
+if not os.path.exists(ENV_FILE_PATH):
+    with open(ENV_FILE_PATH, "w") as f:
+        pass
+
+# 1. Load the existing secrets from the background file
+load_dotenv(dotenv_path=ENV_FILE_PATH)
 
 print("Checking local AI engine status...")
 ollama.pull("deepseek-coder:6.7b")
@@ -32,22 +40,36 @@ if choice == "1":
     documents = SimpleDirectoryReader(repo_path, recursive=True).load_data()
 
 elif choice == "2":
-    saved_token = os.getenv("GITHUB_TOKEN")
-    saved_username = os.getenv("GITHUB_USERNAME")
+    # Check background memory configurations
+    token = os.getenv("GITHUB_TOKEN")
+    owner = os.getenv("GITHUB_USERNAME")
+    repo_name = os.getenv("GITHUB_REPO")
     
-    if saved_token:
-        token = saved_token
-        print("\n🔑 GitHub Access Token loaded automatically.")
+    # --- SMART INITIAL SETUP INTERFACE ---
+    # If the token is missing, ask the user and write it down for next time
+    if not token:
+        token = input("\n🔑 Paste your GitHub Access Token (First-time setup): ").strip()
+        set_key(ENV_FILE_PATH, "GITHUB_TOKEN", token)
+        print("💾 Token saved to configuration configuration successfully!")
     else:
-        token = input("\nPaste your GitHub Access Token: ").strip()
+        print("\n🔑 GitHub Access Token loaded automatically from memory.")
         
-    if saved_username:
-        owner = saved_username
+    # If the username is missing, ask the user and write it down for next time
+    if not owner:
+        owner = input("👤 Enter your GitHub Username/Owner: ").strip()
+        set_key(ENV_FILE_PATH, "GITHUB_USERNAME", owner)
+        print("💾 Username saved to configuration configuration successfully!")
+    else:
         print(f"👤 Repository Owner loaded automatically: {owner}")
-    else:
-        owner = input("Enter the GitHub Username/Owner of the repo: ").strip()
         
-    repo_name = input("Enter the Repository Name: ").strip()
+    # If the target repository name is missing, ask the user and write it down
+    if not repo_name:
+        repo_name = input("📦 Enter the Repository Name: ").strip()
+        set_key(ENV_FILE_PATH, "GITHUB_REPO", repo_name)
+        print("💾 Repository name saved to configuration configuration successfully!")
+    else:
+        print(f"📦 Repository Name loaded automatically: {repo_name}")
+        
     branch = input("Enter the Branch Name (default is 'main'): ").strip() or "main"
     
     print(f"\nConnecting to GitHub and fetching '{owner}/{repo_name}'...")
@@ -79,6 +101,7 @@ elif choice == "2":
             
     except Exception as e:
         print(f"\n❌ Failed to fetch repository. Error: {e}")
+        print("💡 Hint: If your token expired, open the '.env' file on your Mac and update it.")
         exit()
 
 else:
