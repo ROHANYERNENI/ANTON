@@ -1,4 +1,4 @@
-# Anton - Local Code AI Agent 🤖
+# Anton - Local Code AI Agent 
 
 Anton is a privacy-first, fully local AI agent that lives on your machine. It can read through any software codebase folder—either **locally from your hard drive** or **directly downloaded from the GitHub cloud**—memorize its architecture, and answer questions using the **DeepSeek-Coder 6.7B** model.
 
