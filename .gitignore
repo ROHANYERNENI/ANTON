@@ -1,4 +1,21 @@
-__pycache__/
+# Python
 .venv/
+venv/
+__pycache__/
+*.pyc
+
+# macOS
 .DS_Store
+
+# Local workspace
 workspace/
+
+# Environment variables and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# IDE
+.idea/
+.vscode/
