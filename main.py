@@ -7,6 +7,8 @@ from ai_setup import configure_ai
 from ai_setup import ai_configuration_menu
 from git_setup import git_configuration_menu
 from analyze import analyze_project
+from documentation import generate_documentation
+from settings_help import settings_help_menu
 
 def main():
 
@@ -55,16 +57,10 @@ def main():
                 ui.display_success("Git configuration updated.")
 
         elif choice == "Documentation":
-
-            ui.display_message(
-                "Documentation is not implemented yet."
-            )
+            generate_documentation(config)
 
         elif choice == "Settings & Help":
-
-            ui.display_message(
-                "Settings are not implemented yet."
-            )
+            settings_help_menu(config, save_config)
 
 
 # Configuration paths
